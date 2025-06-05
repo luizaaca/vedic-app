@@ -181,7 +181,7 @@ exports.getVedicChart = (data) => new Promise((resolve, reject) => {
 
               swe.swe_houses(jd_ut, lat, lon, 'P', (houses) => {
                 const tropicalAsc = houses.ascendant;
-                console.log(`Tropical Ascendant: ${tropicalAsc}`);s
+                console.log(`Tropical Ascendant: ${tropicalAsc}`);
                 const siderealAsc = (tropicalAsc - ayan + 360) % 360;
                 chart.ascendant = siderealAsc.toFixed(2);
                 resolve(chart);
