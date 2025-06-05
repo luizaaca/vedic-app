@@ -2,8 +2,8 @@ const swe = require('swisseph');
 const path = require('path');
 
 // Configurações
-swe.set_ephe_path(path.join(__dirname, './ephe'));
-swe.set_sid_mode(swe.SE_SIDM_LAHIRI);
+swe.swe_set_ephe_path(path.join(__dirname, './ephe')); // Corrected function name
+swe.swe_set_sid_mode(swe.SE_SIDM_LAHIRI); // Corrected function name
 
 const nakshatras = [
   "Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra", "Punarvasu",
@@ -134,7 +134,7 @@ exports.getVedicChart = (data) => new Promise((resolve, reject) => {
           chart.mahadasha.sequence[0].antardashas = calculateAntardashas(mahaLord, firstStart);
 
           // Ascendente
-          swe.get_ayanamsa_ut(jd_ut, (ayan) => {
+          swe.swe_get_ayanamsa_ut(jd_ut, (ayan) => { // Corrected function name
             swe.swe_houses(jd_ut, lat, lon, 'P', (houses) => {
               const tropicalAsc = houses.ascendant;
               const siderealAsc = (tropicalAsc - ayan.ayanamsa + 360) % 360;
