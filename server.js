@@ -22,12 +22,10 @@ app.post("/api/explain", async (req, res) => {
 
    const prompt = `
 Você é um astrólogo védico experiente. Recebeu os seguintes dados de um mapa astral em formato JSON.
-Faça um resumo focando nos principais resultados, explicando o motivo e o que diz sobre a pessoa. 
-Não seja muito extensivo, quem está falando é um profissional de astrologia védica que quer material 
-de suporte (cola) para fornecer sua analise para seu cliente.  Aqui estão os dados:
+Faça um resumo em tópicos focando nos principais resultados, explicando o motivo e o que diz sobre a pessoa. 
+Quero usar o resultado como material de suporte (cola) para fornecer sua analise para meu cliente. Use pt-br. Aqui estão os dados:
 
 ${JSON.stringify(chart, null, 2)}`;
-
    try {
       const response = await fetch(
          "https://api.groq.com/openai/v1/chat/completions",
