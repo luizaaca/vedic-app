@@ -59,7 +59,7 @@ router.post("/", async (req, res) => {
 
          const queryResponse = await index.query({
             vector: queryEmbedding,
-            topK: 5,
+            topK: 7,
          });
 
          if (queryResponse.matches && queryResponse.matches.length > 0) {
