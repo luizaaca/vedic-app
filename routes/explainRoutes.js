@@ -1,11 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const { CohereEmbeddings } = require("@langchain/cohere"); // Alterado para Cohere
+const { CohereEmbeddings } = require("@langchain/cohere");
 const { Pinecone } = require("@pinecone-database/pinecone");
-// Note: 'fetch' is globally available in Node.js v18+
-// Se estiver usando uma versão anterior do Node.js e 'fetch' não estiver disponível,
-// você pode precisar instalar um pacote como 'node-fetch': npm install node-fetch
-// e importá-lo: const fetch = require('node-fetch');
 const fs = require("fs");
 const path = require("path");
 
@@ -14,8 +10,10 @@ router.post("/", async (req, res) => {
    const question = req.body.question;
    const chartDataString = JSON.stringify(chart, null, 2);
 
-   let context =
-      "Nenhum contexto adicional relevante encontrado na base de conhecimento.";
+   const currentDate = new Date();
+   let context = "Data e hora atual: " + currentDate.toLocaleString("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+   }) + " GMT-3\n\n";
    let kbMapping = {};
 
    try {
@@ -36,14 +34,13 @@ router.post("/", async (req, res) => {
          COHERE_API_KEY,
          PINECONE_API_KEY,
          PINECONE_INDEX_NAME,
-      } = process.env; // Alterado para COHERE_API_KEY
+      } = process.env; 
 
       if (!COHERE_API_KEY || !PINECONE_API_KEY || !PINECONE_INDEX_NAME) {
          console.warn(
             "Variáveis de ambiente para Cohere ou Pinecone não totalmente configuradas. A recuperação de contexto pode falhar."
          );
       } else {
-         // 1️⃣ Recuperação com Pinecone
          const pinecone = new Pinecone({
             apiKey: PINECONE_API_KEY,
          });
@@ -51,12 +48,11 @@ router.post("/", async (req, res) => {
          const index = pinecone.index(PINECONE_INDEX_NAME);
 
          const embedder = new CohereEmbeddings({
-            apiKey: COHERE_API_KEY, // Cohere usa 'apiKey'
-            model: "embed-multilingual-v3.0", // Exemplo: use o mesmo modelo do script de ingestão
-            // Para modelos v2, seria modelName: "multilingual-22-12" por exemplo
+            apiKey: COHERE_API_KEY,
+            model: "embed-multilingual-v3.0", 
          });
 
-         const queryTextForEmbedding = question || chartDataString;
+         const queryTextForEmbedding = (question || chartDataString);
          const queryEmbedding = await embedder.embedQuery(
             queryTextForEmbedding
          );
@@ -64,25 +60,14 @@ router.post("/", async (req, res) => {
          const queryResponse = await index.query({
             vector: queryEmbedding,
             topK: 5,
-            // includeValues: false, // Geralmente não precisamos dos vetores de volta
-            // includeMetadata: true, // Se você armazenar o texto como metadados no Pinecone
          });
 
          if (queryResponse.matches && queryResponse.matches.length > 0) {
             const neighborIds = queryResponse.matches.map((match) => match.id);
-
-            // Se você armazenou o texto diretamente como metadados no Pinecone:
-            // const retrievedDocs = queryResponse.matches
-            //    .map((match) => match.metadata?.text) // Supondo que o texto está em metadata.text
-            //    .filter(Boolean);
-            // if (retrievedDocs.length > 0) {
-            //    context = retrievedDocs.join("\n---\n");
-            // }
-
-            // Usando kb_mapping.json (como estava antes para Vertex AI)
+            
             const retrievedDocs = neighborIds
                .map((id) => kbMapping[id])
-               .filter(Boolean); // Filtra IDs não encontrados no mapeamento
+               .filter(Boolean); 
             if (retrievedDocs.length > 0) {
                context = retrievedDocs.join("\n---\n");
             }
@@ -94,7 +79,6 @@ router.post("/", async (req, res) => {
          retrievalError.message,
          retrievalError.stack
       );
-      // Prosseguir com o contexto padrão
    }
 
    let prompt;
@@ -102,7 +86,10 @@ router.post("/", async (req, res) => {
       prompt = `
 Você é um astrólogo védico experiente.
 Com base nos seguintes dados de um mapa astral em formato JSON, responda à pergunta do usuário.
-Use a linguagem pt-br.
+Atente-se aos graus dos planetas e signos para informar corretamente, siga o contexto fornecido, mas não fale 
+sobre graus se o usuário não mencionar.
+O resultado deve ser um material de apoio (cola) para que um astrólogo védico forneça uma análise para o cliente. 
+Use a linguagem pt-br. Retorne formatado. Aqui estão os dados:
 
 Contexto:
 ${context}
@@ -117,9 +104,11 @@ Sua resposta deve ser focada em responder à pergunta, utilizando as informaçõ
    } else {
       prompt = `
 Você é um astrólogo védico experiente. Recebeu os seguintes dados de um mapa astral em formato JSON.
-Faça um resumo em tópicos focando nos principais resultados, explicando o motivo e o que diz sobre a pessoa. 
-O resultado deve ser um material de apoio (cola) para que um astrólogo védico forneça uma analise para o cliente. 
-Use pt-br e reponda com texto formatado, quebra de linha etc. Aqui estão os dados:
+Faça um resumo em tópicos focando nos resultados mais marcantes, explicando o motivo e o que diz sobre a pessoa. 
+Atente-se aos graus dos planetas e signos para informar corretamente, siga o contexto fornecido, mas não fale 
+sobre graus se o usuário não mencionar.
+O resultado deve ser um material de apoio (cola) para que um astrólogo védico forneça uma análise para o cliente. 
+Use pt-br e reponda com texto formatado. Retorne formatado.
 
 Contexto:
 ${context}
