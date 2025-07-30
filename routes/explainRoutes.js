@@ -81,19 +81,19 @@ router.post("/", async (req, res) => {
       );
    }
 
-   let prompt;
-   if (question && question.trim() !== "") {
-      prompt = `
+   let prompt = `
 Você é um astrólogo védico experiente.
 Com base nos seguintes dados de um mapa astral em formato JSON, responda à pergunta do usuário.
-Use os graus dos planetas e signos para informar corretamente as posições, siga o contexto fornecido, mas não fale 
-sobre graus se o usuário não mencionar.
 Se o usuario pedir um resumo do mapa, fale de cada casa (da 1 à 12) e a quais astros estão nelas e o significado disso.
-Use os dados do mapa astral para entender em que casas estão os planetas e signos. 
-Evite falar sobre signIndex, se o usuário perguntar fale p.ex. 'signo na posição 1' ou 'libra', prefira usar o nome do signo. 
+Para calcular as casas, inicie a contagem a partir do signo ascendente. O campo "signs" contem a sequencia dos signos zodiacais.
+Então se o ascendente for Áries, a casa 1 é Áries, a casa 2 é Touro, e assim por diante.
+Para saber em que casa um planeta está, use o campo signName do planeta e veja qual é a casa seguindo na sequência de signos.
+Agrupe os planetas por casa.
+Fale assim, por exemplo: "### Casa 2 (Escorpião) **Marte**: Marte na casa 2, indica... ** **Saturno**: Saturno na casa 2, indica...".
+Nunca fale em "signIndex", fale em termos de casas: p.ex. 'casa 1, libra' ou 'libra, casas 1', prefira usar a casa junto ao nome do signo.
 Sempre sugira perguntas para o usuário continuar a conversa. Seja enxuto.
 O resultado deve ser um material de apoio (cola) para que um astrólogo védico forneça uma análise para o cliente. 
-Use a linguagem pt-br. Retorne formatado com markup, evite espaço entrelinhas em excesso. Aqui estão os dados:
+Aqui estão os dados:
 
 Contexto:
 ${context}
@@ -104,22 +104,9 @@ ${chartDataString}
 Pergunta do Usuário:
 ${question}
 
-Sua resposta deve ser focada em responder à pergunta, utilizando as informações do mapa astral fornecido.`;
-   } else {
-      prompt = `
-Você é um astrólogo védico experiente. Recebeu os seguintes dados de um mapa astral em formato JSON.
-Faça um resumo em tópicos focando nos resultados mais marcantes, explicando o motivo e o que diz sobre a pessoa. 
-Atente-se aos graus dos planetas e signos para informar corretamente, siga o contexto fornecido, mas não fale 
-sobre graus se o usuário não mencionar.
-O resultado deve ser um material de apoio (cola) para que um astrólogo védico forneça uma análise para o cliente. 
-Use pt-br e reponda com texto formatado. Retorne formatado.
-
-Contexto:
-${context}
-
-Dados do Mapa Astral:
-${chartDataString}`;
-   }
+Sua resposta deve ser focada em responder à pergunta, utilizando as informações do mapa astral fornecido.
+Use a linguagem pt-br. Retorne formatado com markup, evite espaço entrelinhas em excesso. `;   
+   
 
    try {
       const llmResponse = await fetch(

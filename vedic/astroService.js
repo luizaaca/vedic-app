@@ -168,7 +168,7 @@ exports.getVedicChart = (data) =>
 
       swe.swe_julday(year, month, day, time, swe.SE_GREG_CAL, (jd_ut) => {
          const planetCodes = [0, 1, 2, 3, 4, 5, 6, 11]; // Calcularemos Rahu (Nodo Verdadeiro)
-         const chart = { planets: {} };
+         const chart = { signs: signs, ascendant:{}, planets: {} };
          let pending = planetCodes.length;
 
          planetCodes.forEach((pcode) => {
@@ -185,11 +185,13 @@ exports.getVedicChart = (data) =>
                const deg = res.longitude;
                const nakIdx = Math.floor(deg / (360 / 27));
                const nakshatra = nakshatras[nakIdx];
+               const signIndex = Math.floor(deg / 30);
 
                chart.planets[getPlanetName(pcode)] = {
                   degree: deg.toFixed(2),
                   nakshatra,
-                  signIndex: Math.floor(deg / 30),
+                  signIndex: signIndex ,
+                  signName: signs[signIndex]
                };
 
                if (--pending === 0) {
@@ -266,6 +268,7 @@ exports.getVedicChart = (data) =>
                         degree: ketuDegree.toFixed(2),
                         nakshatra: ketuNakshatra,
                         signIndex: ketuSignIndex,
+                        signName: signs[ketuSignIndex],
                      };
 
                      // Inserir antardashas da primeira Mahadasha (a atual)
@@ -283,12 +286,23 @@ exports.getVedicChart = (data) =>
                            const siderealAsc = (tropicalAsc - ayan + 360) % 360;
                            const ascSignIndex = Math.floor(siderealAsc / 30);
                            const ascSignName = signs[ascSignIndex];
-
+                           
                            chart.ascendant = {
                               degree: siderealAsc.toFixed(2),
                               signName: ascSignName, 
                               signIndex: ascSignIndex,
+                              houseIndex: 1
                            };
+                           
+                           //Atualizar os planetas com um novo campo casa
+                           for (const planetName in chart.planets) {
+                              const planet = chart.planets[planetName];
+                              const planetDegree = parseFloat(planet.degree);
+                              const planetSignIndex = Math.floor(planetDegree / 30);
+                              const planetHouseIndex = (planetSignIndex - ascSignIndex + 12) % 12 + 1;
+                              planet.houseIndex = planetHouseIndex;
+                           }
+
                            resolve(chart);
                         });
                      });
