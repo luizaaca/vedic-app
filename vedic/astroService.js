@@ -168,7 +168,7 @@ exports.getVedicChart = (data) =>
 
       swe.swe_julday(year, month, day, time, swe.SE_GREG_CAL, (jd_ut) => {
          const planetCodes = [0, 1, 2, 3, 4, 5, 6, 11]; // Calcularemos Rahu (Nodo Verdadeiro)
-         const chart = { signs: signs, ascendant:{}, planets: {} };
+         const chart = { ascendant:{}, planets: {}, signs: signs };
          let pending = planetCodes.length;
 
          planetCodes.forEach((pcode) => {
