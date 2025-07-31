@@ -168,7 +168,7 @@ exports.getVedicChart = (data) =>
 
       swe.swe_julday(year, month, day, time, swe.SE_GREG_CAL, (jd_ut) => {
          const planetCodes = [0, 1, 2, 3, 4, 5, 6, 11]; // Calcularemos Rahu (Nodo Verdadeiro)
-         const chart = { ascendant:{}, planets: {}, signs: signs };
+         const chart = { ascendant: {}, planets: {}, signs: signs, houses: [] };
          let pending = planetCodes.length;
 
          planetCodes.forEach((pcode) => {
@@ -294,13 +294,36 @@ exports.getVedicChart = (data) =>
                               houseIndex: 1
                            };
                            
-                           //Atualizar os planetas com um novo campo casa
+                           // Cria 12 objetos de casa vazios, um para cada signo, começando pelo ascendente
+                           for (let i = 1; i <= 12; i++) {
+                              const houseSignIndex = (ascSignIndex + i - 1) % 12;
+                              const houseSignName = signs[houseSignIndex];
+                              chart.houses.push({
+                                 house_number: i,
+                                 sign: houseSignName,
+                                 start_degree: (houseSignIndex * 30).toFixed(4),
+                                 end_degree: ((houseSignIndex * 30) + 30).toFixed(4),
+                                 planets: [],
+                              });
+                           }
+
+                           // Itera sobre os planetas para atribuir a casa e popular o array de casas
                            for (const planetName in chart.planets) {
                               const planet = chart.planets[planetName];
                               const planetDegree = parseFloat(planet.degree);
                               const planetSignIndex = Math.floor(planetDegree / 30);
                               const planetHouseIndex = (planetSignIndex - ascSignIndex + 12) % 12 + 1;
                               planet.houseIndex = planetHouseIndex;
+
+                              // Acessa a casa diretamente pelo índice (house_number - 1), que é mais eficiente que .find()
+                              const houseForPlanet = chart.houses[planetHouseIndex - 1];
+                              if (houseForPlanet) {
+                                 // Adiciona as informações do planeta à lista de planetas da casa
+                                 houseForPlanet.planets.push({
+                                    planetName: planetName,
+                                    ...planet,
+                                 });
+                              }
                            }
 
                            resolve(chart);

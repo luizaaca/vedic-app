@@ -29,11 +29,12 @@ router.post("/", async (req, res) => {
       );
       //throw error; // Descomente se quiser interromper a execução
    }   
+   
    const promptWithContext = prompt
    .replace("{{initialContext}}", initialContext + retrievedContext)
    .replace("{{chartDataString}}", chartDataString)
    .replace("{{question}}", question);
-   console.log(promptWithContext);
+   
    try {      
       const llmService = createLlmService();
       const interpretation = await llmService.call(promptWithContext);
