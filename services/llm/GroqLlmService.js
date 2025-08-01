@@ -4,20 +4,23 @@ const LlmService = require("./LlmService");
  * Implementação do LlmService para a API da Groq.
  */
 class GroqLlmService extends LlmService {
-   constructor(apiKey) {
+   constructor() {
       super();
-      if (!apiKey) {
+      if (!process.env.LLM_API_KEY_GROQ) {
          throw new Error("A chave de API da Groq é obrigatória.");
       }
-      this.apiKey = apiKey;
-      this.apiUrl = "https://api.groq.com/openai/v1/chat/completions";
+      this.apiKey = process.env.LLM_API_KEY_GROQ;
+      if (!process.env.GROQ_API_URL) {
+         throw new Error("A URL da API Groq é obrigatória.");
+      }
+      this.apiUrl = process.env.GROQ_API_URL;
    }
 
    /**
     * @override
     */
    async call(prompt) {
-      const llmResponse = await fetch(this.apiUrl, {
+      const llmResponse = await fetch(this.apiUrl + '/chat/completions', {
          method: "POST",
          headers: {
             Authorization: `Bearer ${this.apiKey}`,

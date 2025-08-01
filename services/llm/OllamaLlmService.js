@@ -15,7 +15,7 @@ class OllamaLlmService extends LlmService {
    async call(prompt) {
       try {
 
-         const response = await axios.post(this.apiUrl, {
+         const response = await axios.post(this.apiUrl + '/api/generate', {
             model: this.model,
             prompt: prompt,
             stream: false,

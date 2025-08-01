@@ -168,8 +168,9 @@ exports.getVedicChart = (data) =>
 
       swe.swe_julday(year, month, day, time, swe.SE_GREG_CAL, (jd_ut) => {
          const planetCodes = [0, 1, 2, 3, 4, 5, 6, 11]; // Calcularemos Rahu (Nodo Verdadeiro)
-         const chart = { ascendant: {}, planets: {}, signs: signs, houses: [] };
-         let pending = planetCodes.length;
+         const chart = { ascendant: {}, houses: [] }; // Objeto de gráfico simplificado
+         const tempPlanets = []; // Array temporário para armazenar os planetas
+         let pending = planetCodes.length; // Contador para operações assíncronas
 
          planetCodes.forEach((pcode) => {
             swe.swe_calc_ut(jd_ut, pcode, swe.SEFLG_SIDEREAL, (res) => {
@@ -187,12 +188,14 @@ exports.getVedicChart = (data) =>
                const nakshatra = nakshatras[nakIdx];
                const signIndex = Math.floor(deg / 30);
 
-               chart.planets[getPlanetName(pcode)] = {
+               // Adiciona o planeta ao array temporário
+               tempPlanets.push({
+                  planetName: getPlanetName(pcode),
                   degree: deg.toFixed(2),
                   nakshatra,
-                  signIndex: signIndex ,
-                  signName: signs[signIndex]
-               };
+                  signIndex: signIndex,
+                  sign: signs[signIndex],
+               });
 
                if (--pending === 0) {
                   // Obter a data UTC precisa a partir do Dia Juliano para os cálculos de Dasha
@@ -223,7 +226,13 @@ exports.getVedicChart = (data) =>
                         Date.UTC(utcYear, utcMonth - 1, utcDay, h, min, sec)
                      );
 
-                     const moonDeg = parseFloat(chart.planets.Moon.degree);
+                     const moon = tempPlanets.find((p) => p.planetName === "Moon");
+                     if (!moon) {
+                        return reject(
+                           new Error("Falha ao calcular a posição da Lua.")
+                        );
+                     }
+                     const moonDeg = parseFloat(moon.degree);
                      const nakLength = 360 / 27;
                      const moonNakIdx = Math.floor(moonDeg / nakLength); // Nakshatra da Lua
                      const nakStart = moonNakIdx * nakLength;
@@ -247,29 +256,26 @@ exports.getVedicChart = (data) =>
                      };
 
                      // Calcular Ketu (180 graus oposto a Rahu)
-                     // Certifique-se que Rahu foi calculado
-                     if (
-                        !chart.planets.Rahu ||
-                        typeof chart.planets.Rahu.degree === "undefined"
-                     ) {
+                     const rahu = tempPlanets.find((p) => p.planetName === "Rahu");
+                     if (!rahu) {
                         return reject(
                            new Error(
                               "Falha ao calcular Rahu. Não é possível derivar Ketu."
                            )
                         );
                      }
-                     const rahuDegree = parseFloat(chart.planets.Rahu.degree);
+                     const rahuDegree = parseFloat(rahu.degree);
                      const ketuDegree = (rahuDegree + 180) % 360;
                      const ketuNakIdx = Math.floor(ketuDegree / (360 / 27));
                      const ketuNakshatra = nakshatras[ketuNakIdx];
                      const ketuSignIndex = Math.floor(ketuDegree / 30);
 
-                     chart.planets.Ketu = {
+                     tempPlanets.push({
+                        planetName: "Ketu",
                         degree: ketuDegree.toFixed(2),
                         nakshatra: ketuNakshatra,
                         signIndex: ketuSignIndex,
-                        signName: signs[ketuSignIndex],
-                     };
+                     });
 
                      // Inserir antardashas da primeira Mahadasha (a atual)
                      // A data 'from' da primeira mahadasha agora será baseada na actualBirthDateUTC
@@ -289,9 +295,8 @@ exports.getVedicChart = (data) =>
                            
                            chart.ascendant = {
                               degree: siderealAsc.toFixed(2),
-                              signName: ascSignName, 
-                              signIndex: ascSignIndex,
-                              houseIndex: 1
+                              sign: ascSignName,
+                              houseNumber: 1,
                            };
                            
                            // Cria 12 objetos de casa vazios, um para cada signo, começando pelo ascendente
@@ -299,32 +304,30 @@ exports.getVedicChart = (data) =>
                               const houseSignIndex = (ascSignIndex + i - 1) % 12;
                               const houseSignName = signs[houseSignIndex];
                               chart.houses.push({
-                                 house_number: i,
+                                 houseNumber: i,
                                  sign: houseSignName,
-                                 start_degree: (houseSignIndex * 30).toFixed(4),
-                                 end_degree: ((houseSignIndex * 30) + 30).toFixed(4),
+                                 startDegree: (houseSignIndex * 30).toFixed(4),
+                                 endDegrees: ((houseSignIndex * 30) + 30).toFixed(4),
                                  planets: [],
                               });
                            }
 
-                           // Itera sobre os planetas para atribuir a casa e popular o array de casas
-                           for (const planetName in chart.planets) {
-                              const planet = chart.planets[planetName];
+                           // Itera sobre os planetas temporários para atribuir a casa e popular o array de casas
+                           tempPlanets.forEach((planet) => {
                               const planetDegree = parseFloat(planet.degree);
-                              const planetSignIndex = Math.floor(planetDegree / 30);
+                              const planetSignIndex = planet.signIndex;
                               const planetHouseIndex = (planetSignIndex - ascSignIndex + 12) % 12 + 1;
-                              planet.houseIndex = planetHouseIndex;
+                              planet.houseNumber = planetHouseIndex;
 
-                              // Acessa a casa diretamente pelo índice (house_number - 1), que é mais eficiente que .find()
+                              // Acessa a casa diretamente pelo índice (houseNumber - 1), que é mais eficiente que .find()
                               const houseForPlanet = chart.houses[planetHouseIndex - 1];
                               if (houseForPlanet) {
-                                 // Adiciona as informações do planeta à lista de planetas da casa
-                                 houseForPlanet.planets.push({
-                                    planetName: planetName,
-                                    ...planet,
-                                 });
+                                 // Cria uma cópia do objeto planeta sem a propriedade 'signIndex'
+                                 const { signIndex, ...planetForOutput } = planet;
+                                 // Adiciona o objeto limpo do planeta à lista de planetas da casa
+                                 houseForPlanet.planets.push(planetForOutput);
                               }
-                           }
+                           });
 
                            resolve(chart);
                         });
