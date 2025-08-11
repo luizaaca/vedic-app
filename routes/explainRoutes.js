@@ -1,12 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const { createLlmService } = require("../services/llm/llmFactory");
-const { prompt } = require("../prompts/explain-astral-chart.prompt");
+const { prompt_initial, prompt_question } = require("../prompts/explain-astral-chart.prompt");
 const ContextRetrievalService = require("../services/rag/ContextRetrievalService");
 
 router.post("/", async (req, res) => {
    const chart = req.body.chartData;
    const question = req.body.question;
+   const chatMessages = req.body.chatMessages;
+   const initialQuestion = req.body.initial;
    const chartDataString = JSON.stringify(chart, null, 2);
 
    const initialContext =
@@ -30,12 +32,19 @@ router.post("/", async (req, res) => {
       //throw error; // Descomente se quiser interromper a execução
    }   
    
-   const promptWithContext = prompt
-   .replace("{{initialContext}}", initialContext + retrievedContext)
-   .replace("{{chartDataString}}", chartDataString)
-   .replace("{{question}}", question);
-   
-   try {      
+   let promptWithContext = "";
+   if(initialQuestion === true) {
+      promptWithContext = prompt_initial;
+   }else {
+      const history = chatMessages ? JSON.stringify(chatMessages, null, 2) : "O histórico de perguntas não foi disponibilizado.";
+      promptWithContext = prompt_question.replace("{{history}}", history);
+   }
+   promptWithContext = promptWithContext
+      .replace("{{initialContext}}", initialContext + retrievedContext)
+      .replace("{{chartDataString}}", chartDataString)
+      .replace("{{question}}", question);
+
+      try {      
       const llmService = createLlmService();
       const interpretation = await llmService.call(promptWithContext);
       res.json({ interpretation });
